@@ -92,7 +92,7 @@ jobs:
           echo "Pod deployed successfully!"
           kubectl get pod hello-world-pod
           kubectl describe pod hello-world-pod
-          kuebctl logs hello-world-pod
+          kubectl logs hello-world-pod
           kubectl delete pod hello-world-pod
       - name: Example AWS Parameter Store retrieval
         run: |
