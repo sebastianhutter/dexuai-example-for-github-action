@@ -1,0 +1,99 @@
+name: AWS Deployment Example
+
+on:
+  # Trigger manually for demonstration purposes
+  workflow_dispatch:
+  # Or trigger on push to main
+  # push:
+  #   branches:
+  #     - main
+
+# These permissions are required for OIDC authentication
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  AWS_ACCOUNT_ID: 474350780167
+  EKS_CLUSTER_NAME: dexu-ai-eks-stage-01
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials using OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          # Replace with your AWS IAM role ARN
+          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/github-action-role-${{ env.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
+          # Optional: Add role session name for better tracking
+          role-session-name: GitHubActions-${{ github.run_id }}
+
+      - name: Verify AWS identity
+        run: |
+          echo "Verifying AWS credentials..."
+          aws sts get-caller-identity
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push Docker image to ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          echo "Building Docker image..."
+          # Example: Build and push a Docker image
+          # docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          # docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          # docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          # docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+          echo "ECR Registry: $ECR_REGISTRY"
+          echo "Image would be pushed to: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: "latest"
+
+      - name: Configure kubectl for EKS
+        run: |
+          echo "Configuring kubectl to connect to EKS cluster..."
+          aws eks update-kubeconfig \
+            --region ${{ env.AWS_REGION }} \
+            --name ${{ env.EKS_CLUSTER_NAME }}
+
+      - name: Verify EKS connection
+        run: |
+          echo "Testing EKS cluster connection..."
+          kubectl cluster-info
+          kubectl get nodes
+          kubectl get namespaces
+
+      - name: Additional AWS operations examples
+        run: |
+          echo "=== Additional AWS CLI Examples ==="
+
+          # List S3 buckets
+          echo "S3 buckets:"
+          aws s3 ls
+
+          # List ECR repositories
+          echo "ECR repositories:"
+          aws ecr describe-repositories --region ${{ env.AWS_REGION }} || true
+
+          # Get EKS cluster info
+          echo "EKS cluster info:"
+          aws eks describe-cluster --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }} || true
+
+          # List EC2 instances
+          echo "EC2 instances:"
+          aws ec2 describe-instances --region ${{ env.AWS_REGION }} --query 'Reservations[*].Instances[*].[InstanceId,State.Name,Tags[?Key==`Name`].Value|[0]]' --output table || true
