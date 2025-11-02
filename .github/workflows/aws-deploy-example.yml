@@ -49,15 +49,8 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          echo "Building Docker image..."
-          # Example: Build and push a Docker image
-          # docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          # docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          # docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
-          # docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-
           echo "ECR Registry: $ECR_REGISTRY"
-          echo "Image would be pushed to: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          echo "Image would be pushed to: $ECR_REGISTRY/myawesomeimage:$IMAGE_TAG"
 
       - name: Install kubectl
         uses: azure/setup-kubectl@v4
@@ -78,22 +71,34 @@ jobs:
           kubectl get nodes
           kubectl get namespaces
 
-      - name: Additional AWS operations examples
+      - name: Example AWS Parameter Store retrieval
         run: |
-          echo "=== Additional AWS CLI Examples ==="
+          echo "Retrieving a parameter from AWS SSM Parameter Store..."
+          aws ssm get-parameter --name "/koryo/github-action/example-parameter" --with-decryption
 
-          # List S3 buckets
-          echo "S3 buckets:"
-          aws s3 ls
+      - name: Example AWS S3 List bucket
+        run: |
+          echo "Listing contents of S3 bucket..."
+          echo "This permission is managed in the customer inline policy which you can modify at any time"
+          echo "see staging role: https://us-east-1.console.aws.amazon.com/iam/home?region=us-east-1#/roles/details/github-action-role-us-east-1"
+          aws s3 ls s3://assets-dexu-ai-stage-s3-nvirginia/
 
-          # List ECR repositories
-          echo "ECR repositories:"
-          aws ecr describe-repositories --region ${{ env.AWS_REGION }} || true
+        #   - name: Additional AWS operations examples
+        # run: |
+        #   echo "=== Additional AWS CLI Examples ==="
 
-          # Get EKS cluster info
-          echo "EKS cluster info:"
-          aws eks describe-cluster --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }} || true
+        #   # List S3 buckets
+        #   echo "S3 buckets:"
+        #   aws s3 ls
 
-          # List EC2 instances
-          echo "EC2 instances:"
-          aws ec2 describe-instances --region ${{ env.AWS_REGION }} --query 'Reservations[*].Instances[*].[InstanceId,State.Name,Tags[?Key==`Name`].Value|[0]]' --output table || true
+        #   # List ECR repositories
+        #   echo "ECR repositories:"
+        #   aws ecr describe-repositories --region ${{ env.AWS_REGION }} || true
+
+        #   # Get EKS cluster info
+        #   echo "EKS cluster info:"
+        #   aws eks describe-cluster --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }} || true
+
+        #   # List EC2 instances
+        #   echo "EC2 instances:"
+        #   aws ec2 describe-instances --region ${{ env.AWS_REGION }} --query 'Reservations[*].Instances[*].[InstanceId,State.Name,Tags[?Key==`Name`].Value|[0]]' --output table || true
