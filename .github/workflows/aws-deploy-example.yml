@@ -71,6 +71,29 @@ jobs:
           kubectl get nodes
           kubectl get namespaces
 
+      - name: Deploy EKS example pod
+        run: |
+          cat << 'EOF' | kubectl apply -f -
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: hello-world-pod
+            labels:
+              app: hello-world
+          spec:
+            containers:
+            - name: hello-world
+              image: nginx:latest
+              ports:
+              - containerPort: 80
+            restartPolicy: Never
+          EOF
+
+          echo "Pod deployed successfully!"
+          kubectl get pod hello-world-pod
+          kubectl describe pod hello-world-pod
+          kuebctl logs hello-world-pod
+          kubectl delete pod hello-world-pod
       - name: Example AWS Parameter Store retrieval
         run: |
           echo "Retrieving a parameter from AWS SSM Parameter Store..."
@@ -81,6 +104,7 @@ jobs:
           echo "Listing contents of S3 bucket..."
           echo "This permission is managed in the customer inline policy which you can modify at any time"
           echo "see staging role: https://us-east-1.console.aws.amazon.com/iam/home?region=us-east-1#/roles/details/github-action-role-us-east-1"
+
           aws s3 ls s3://assets-dexu-ai-stage-s3-nvirginia/
 
         #   - name: Additional AWS operations examples
