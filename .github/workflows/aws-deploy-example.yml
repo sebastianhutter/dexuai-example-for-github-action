@@ -17,6 +17,7 @@ env:
   AWS_REGION: us-east-1
   AWS_ACCOUNT_ID: 474350780167
   EKS_CLUSTER_NAME: dexu-ai-eks-stage-01
+  EC2_INSTANCE_ID: i-05e3672fad96b8167 # instance id for ssm example (worker-node-stage-instance), the step will only work if the instance is running!
 
 jobs:
   deploy:
@@ -107,22 +108,21 @@ jobs:
 
           aws s3 ls s3://assets-dexu-ai-stage-s3-nvirginia/
 
-        #   - name: Additional AWS operations examples
-        # run: |
-        #   echo "=== Additional AWS CLI Examples ==="
+      - name: Example EC2 ssm command
+        run: |
+          echo "Sending a command to EC2 instance via SSM..."
+          echo "ATTENTION: this will only work if the instance is running!"
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "${{ env.EC2_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --comment "GitHub Actions SSM Command Example" \
+            --parameters commands=["echo Hello from GitHub Actions!"] \
+            --query "Command.CommandId" \
+            --output text)
 
-        #   # List S3 buckets
-        #   echo "S3 buckets:"
-        #   aws s3 ls
+          echo "Command sent. Command ID: $COMMAND_ID"
 
-        #   # List ECR repositories
-        #   echo "ECR repositories:"
-        #   aws ecr describe-repositories --region ${{ env.AWS_REGION }} || true
-
-        #   # Get EKS cluster info
-        #   echo "EKS cluster info:"
-        #   aws eks describe-cluster --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }} || true
-
-        #   # List EC2 instances
-        #   echo "EC2 instances:"
-        #   aws ec2 describe-instances --region ${{ env.AWS_REGION }} --query 'Reservations[*].Instances[*].[InstanceId,State.Name,Tags[?Key==`Name`].Value|[0]]' --output table || true
+          sleep 5
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "${{ env.EC2_INSTANCE_ID }}"
